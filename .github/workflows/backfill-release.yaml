@@ -8,6 +8,7 @@ on:
 concurrency:
   group: backfill
   cancel-in-progress: false
+  queue: max
 
 permissions:
   packages: write
