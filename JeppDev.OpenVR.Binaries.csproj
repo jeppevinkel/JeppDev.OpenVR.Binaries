@@ -9,6 +9,10 @@
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <TargetFramework>netstandard2.0</TargetFramework>
     <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <PackageProjectUrl>https://github.com/jeppevinkel/JeppDev.OpenVR.Binaries</PackageProjectUrl>
+  <RepositoryUrl>https://github.com/jeppevinkel/JeppDev.OpenVR.Binaries</RepositoryUrl>
+  <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
