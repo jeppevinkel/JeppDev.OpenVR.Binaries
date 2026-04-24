@@ -12,12 +12,12 @@ via a GitHub Actions workflow.
 
 ## Supported Platforms
 
-| Platform | Architecture | Binary |
-|---|---|---|
-| Windows | x64 | `openvr_api.dll` |
-| Windows | x86 | `openvr_api.dll` |
-| Linux | x64 | `libopenvr_api.so` |
-| Linux | ARM64 | `libopenvr_api.so` |
+| Platform | Architecture | Binary | Since |
+|---|---|---|---|
+| Windows | x64 | `openvr_api.dll` | All versions |
+| Windows | x86 | `openvr_api.dll` | All versions |
+| Linux | x64 | `libopenvr_api.so` | All versions |
+| Linux | ARM64 | `libopenvr_api.so` | v1.11.11 |
 
 ## Installation
 
