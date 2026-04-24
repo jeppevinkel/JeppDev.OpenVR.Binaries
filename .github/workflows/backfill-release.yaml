@@ -1,7 +1,13 @@
 name: Backfill OpenVR NuGet Packages
 
 on:
+  schedule:
+    - cron: "*/10 * * * *"
   workflow_dispatch:
+
+concurrency:
+  group: backfill
+  cancel-in-progress: false
 
 permissions:
   packages: write
@@ -13,11 +19,11 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.x'
+          dotnet-version: '9.x'
 
-      - name: Backfill all versions
+      - name: Backfill versions
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -43,7 +49,14 @@ jobs:
             REVERSED+=("${TAGS[$i]}")
           done
 
+          PUBLISHED=0
+
           for TAG in "${REVERSED[@]}"; do
+            if [ "$PUBLISHED" -ge 10 ]; then
+              echo "Batch limit reached, stopping"
+              break
+            fi
+
             VERSION=${TAG#v}
             echo "::group::$TAG"
 
@@ -118,6 +131,15 @@ jobs:
 
             # Clean up nupkg for next iteration
             rm -f JeppDev.OpenVR.Binaries.$VERSION.nupkg
+            PUBLISHED=$((PUBLISHED + 1))
 
+            echo "✅ Published $PUBLISHED/10"
             echo "::endgroup::"
+
+            if [ "$PUBLISHED" -lt 10 ]; then
+              echo "Waiting 60s before next publish..."
+              sleep 60
+            fi
           done
+
+          echo "Done. Published $PUBLISHED versions this run."
