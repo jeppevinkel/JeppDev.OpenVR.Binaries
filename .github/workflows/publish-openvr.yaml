@@ -1,8 +1,8 @@
 name: Publish OpenVR Binaries NuGet Package
 
 on:
-  schedule:
-    - cron: "0 0 * * *" # Daily check
+  # schedule:
+  #   - cron: "0 0 * * *" # Daily check
   workflow_dispatch:
     # Allow manual trigger
 
