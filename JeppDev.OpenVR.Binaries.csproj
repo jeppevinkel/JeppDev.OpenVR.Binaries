@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>JeppDev.OpenVR.Binaries</PackageId>
+    <Version>0.0.0</Version>
+    <Authors>Jeppevinkel</Authors>
+    <Description>Native binaries for OpenVR</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="runtimes/**/*.*"     Pack="true" PackagePath="runtimes/" />
+    <None Include="build/**/*.*"        Pack="true" PackagePath="build/" />
+    <None Include="README.md"           Pack="true" PackagePath="" />
+    <None Include="LICENSE"             Pack="true" PackagePath="" />
+    <None Include="THIRD_PARTY_NOTICES" Pack="true" PackagePath="" />
+  </ItemGroup>
+</Project>

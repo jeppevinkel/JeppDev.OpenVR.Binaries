@@ -58,30 +58,29 @@ jobs:
           curl -fL "$BASE/bin/linuxarm64/libopenvr_api.so"     -o runtimes/linux-arm64/native/libopenvr_api.so
           curl -fL "$BASE/bin/linuxarm64/libopenvr_api.so.dbg" -o runtimes/linux-arm64/native/libopenvr_api.so.dbg
 
-      - name: Inject version into nuspec
+      - name: Setup dotnet
         if: steps.check.outputs.exists == 'false'
-        run: |
-          sed -i 's/<version>0.0.0<\/version>/<version>${{ steps.openvr.outputs.version }}<\/version>/' \
-            JeppDev.OpenVR.Binaries.nuspec
-
-      - name: Install NuGet CLI
-        if: steps.check.outputs.exists == 'false'
-        uses: nuget/setup-nuget@v4
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.x'
 
       - name: Pack
         if: steps.check.outputs.exists == 'false'
-        run: nuget pack JeppDev.OpenVR.Binaries.nuspec
+        run: |
+          dotnet pack JeppDev.OpenVR.Binaries.csproj \
+            -p:Version=${{ steps.openvr.outputs.version }} \
+            --output .
 
       # - name: Push to NuGet.org
       #   if: steps.check.outputs.exists == 'false'
       #   run: |
-      #     nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
-      #       -ApiKey ${{ secrets.NUGET_API_KEY }} \
-      #       -Source https://api.nuget.org/v3/index.json
+      #     dotnet nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
+      #       -k ${{ secrets.NUGET_API_KEY }} \
+      #       -s https://api.nuget.org/v3/index.json
 
       - name: Push to GitHub Packages
         if: steps.check.outputs.exists == 'false'
         run: |
-          nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
-            -ApiKey ${{ secrets.GITHUB_TOKEN }} \
-            -Source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
+            -k ${{ secrets.GITHUB_TOKEN }} \
+            -s "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
