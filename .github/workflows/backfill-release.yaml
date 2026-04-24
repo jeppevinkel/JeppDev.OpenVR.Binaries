@@ -1,8 +1,8 @@
 name: Backfill OpenVR NuGet Packages
 
 on:
-  schedule:
-    - cron: "*/10 * * * *"
+  # schedule:
+  #   - cron: "*/10 * * * *"
   workflow_dispatch:
 
 concurrency:
