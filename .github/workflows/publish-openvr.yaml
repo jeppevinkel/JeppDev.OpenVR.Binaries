@@ -21,6 +21,18 @@ jobs:
           TAG=$(curl -s https://api.github.com/repos/ValveSoftware/openvr/releases/latest \
             | jq -r .tag_name)
           VERSION=${TAG#v}  # Strip leading 'v'
+
+          # Only sanitize if not already valid SemVer
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+            VERSION=$(echo "$VERSION" | sed -E 's/[a-zA-Z]+$//')
+            # Verify the result is now valid SemVer
+            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+              echo "⚠️ Latest release '$TAG' could not be sanitized to valid SemVer, aborting"
+              exit 0
+            fi
+            echo "Sanitized $TAG to $VERSION"
+          fi
+
           echo "tag=$TAG"         >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
