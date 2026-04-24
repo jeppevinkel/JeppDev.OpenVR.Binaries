@@ -58,6 +58,18 @@ jobs:
             fi
 
             VERSION=${TAG#v}
+
+            # Only sanitize if not already valid SemVer
+            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+              VERSION=$(echo "$VERSION" | sed -E 's/[a-zA-Z]+$//')
+              # Verify the result is now valid SemVer
+              if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$'; then
+                echo "⚠️ Skipping $TAG - could not sanitize to valid SemVer"
+                echo "::endgroup::"
+                continue
+              fi
+              echo "Sanitized $TAG to $VERSION"
+            fi
             echo "::group::$TAG"
 
             # Check NuGet.org
