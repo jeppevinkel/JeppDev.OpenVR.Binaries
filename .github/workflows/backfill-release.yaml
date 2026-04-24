@@ -61,10 +61,11 @@ jobs:
             echo "::group::$TAG"
 
             # Check NuGet.org
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              "https://api.nuget.org/v3/registration5/jeppdev.openvr.binaries/$VERSION.json")
+            VERSIONS=$(curl -s \
+              "https://api.nuget.org/v3-flatcontainer/jeppdev.openvr.binaries/index.json" \
+              | jq -r '.versions[]')
 
-            if [ "$STATUS" = "200" ]; then
+            if echo "$VERSIONS" | grep -qx "$VERSION"; then
               echo "Already published, skipping"
               echo "::endgroup::"
               continue
@@ -122,12 +123,14 @@ jobs:
             # Push to NuGet.org
             dotnet nuget push JeppDev.OpenVR.Binaries.$VERSION.nupkg \
               -k $NUGET_API_KEY \
-              -s https://api.nuget.org/v3/index.json
+              -s https://api.nuget.org/v3/index.json \
+              --skip-duplicate
 
             # Push to GitHub Packages
             dotnet nuget push JeppDev.OpenVR.Binaries.$VERSION.nupkg \
               -k $GITHUB_TOKEN \
-              -s "https://nuget.pkg.github.com/$REPO_OWNER/index.json"
+              -s "https://nuget.pkg.github.com/$REPO_OWNER/index.json" \
+              --skip-duplicate
 
             # Clean up nupkg for next iteration
             rm -f JeppDev.OpenVR.Binaries.$VERSION.nupkg
