@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>JeppDev.OpenVR.Binaries</id>
+    <version>0.0.0</version>
+    <authors>Jeppevinkel</authors>
+    <description>Native binaries for OpenVR</description>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="file">LICENSE</license>
+  </metadata>
+  <files>
+    <file src="runtimes\**\*.*" target="runtimes\" />
+    <file src="build\**\*.*"    target="build\" />
+  </files>
+  <files>
+    <file src="LICENSE"             target="" />
+    <file src="THIRD_PARTY_NOTICES" target="" />
+  </files>
+</package>

@@ -1,0 +1,87 @@
+name: Publish OpenVR Binaries NuGet Package
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Daily check
+  workflow_dispatch:
+    # Allow manual trigger
+
+permissions:
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get latest OpenVR release
+        id: openvr
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/ValveSoftware/openvr/releases/latest \
+            | jq -r .tag_name)
+          VERSION=${TAG#v}  # Strip leading 'v'
+          echo "tag=$TAG"         >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if NuGet version already exists
+        id: check
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://api.nuget.org/v3/registration5/JeppDev.OpenVR.Binaries/${{ steps.openvr.outputs.version }}.json")
+          echo "exists=$( [ "$STATUS" = "200" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+
+      - name: Download binaries
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          BASE="https://github.com/ValveSoftware/openvr/raw/${{ steps.openvr.outputs.tag }}"
+
+          # win-x64
+          mkdir -p runtimes/win-x64/native
+          curl -fL "$BASE/bin/win64/openvr_api.dll"     -o runtimes/win-x64/native/openvr_api.dll
+          curl -fL "$BASE/bin/win64/openvr_api.dll.sig" -o runtimes/win-x64/native/openvr_api.dll.sig
+          curl -fL "$BASE/bin/win64/openvr_api.pdb"     -o runtimes/win-x64/native/openvr_api.pdb
+
+          # win-x86
+          mkdir -p runtimes/win-x86/native
+          curl -fL "$BASE/bin/win32/openvr_api.dll"     -o runtimes/win-x86/native/openvr_api.dll
+          curl -fL "$BASE/bin/win32/openvr_api.dll.sig" -o runtimes/win-x86/native/openvr_api.dll.sig
+          curl -fL "$BASE/bin/win32/openvr_api.pdb"     -o runtimes/win-x86/native/openvr_api.pdb
+
+          # linux-x64
+          mkdir -p runtimes/linux-x64/native
+          curl -fL "$BASE/bin/linux64/libopenvr_api.so"     -o runtimes/linux-x64/native/libopenvr_api.so
+          curl -fL "$BASE/bin/linux64/libopenvr_api.so.dbg" -o runtimes/linux-x64/native/libopenvr_api.so.dbg
+
+          # linux-arm64
+          mkdir -p runtimes/linux-arm64/native
+          curl -fL "$BASE/bin/linuxarm64/libopenvr_api.so"     -o runtimes/linux-arm64/native/libopenvr_api.so
+          curl -fL "$BASE/bin/linuxarm64/libopenvr_api.so.dbg" -o runtimes/linux-arm64/native/libopenvr_api.so.dbg
+
+      - name: Inject version into nuspec
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          sed -i 's/<version>0.0.0<\/version>/<version>${{ steps.openvr.outputs.version }}<\/version>/' \
+            JeppDev.OpenVR.Binaries.nuspec
+
+      - name: Install NuGet CLI
+        if: steps.check.outputs.exists == 'false'
+        uses: nuget/setup-nuget@v4
+
+      - name: Pack
+        if: steps.check.outputs.exists == 'false'
+        run: nuget pack JeppDev.OpenVR.Binaries.nuspec
+
+      # - name: Push to NuGet.org
+      #   if: steps.check.outputs.exists == 'false'
+      #   run: |
+      #     nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
+      #       -ApiKey ${{ secrets.NUGET_API_KEY }} \
+      #       -Source https://api.nuget.org/v3/index.json
+
+      - name: Push to GitHub Packages
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
+            -ApiKey ${{ secrets.GITHUB_TOKEN }} \
+            -Source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
