@@ -27,9 +27,11 @@ jobs:
       - name: Check if NuGet version already exists
         id: check
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://api.nuget.org/v3/registration5/jeppdev.openvr.binaries/${{ steps.openvr.outputs.version }}.json")
-          echo "exists=$( [ "$STATUS" = "200" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+          VERSIONS=$(curl -s \
+            "https://api.nuget.org/v3-flatcontainer/jeppdev.openvr.binaries/index.json" \
+            | jq -r '.versions[]')
+          echo "exists=$(echo "$VERSIONS" | grep -qx "${{ steps.openvr.outputs.version }}" \
+            && echo true || echo false)" >> $GITHUB_OUTPUT
 
       - name: Download binaries
         if: steps.check.outputs.exists == 'false'
@@ -62,7 +64,7 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.x'
+          dotnet-version: "10.x"
 
       - name: Pack
         if: steps.check.outputs.exists == 'false'
