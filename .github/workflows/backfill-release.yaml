@@ -1,0 +1,123 @@
+name: Backfill OpenVR NuGet Packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.x'
+
+      - name: Backfill all versions
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          # Fetch all releases with pagination
+          PAGE=1
+          TAGS=()
+          while true; do
+            RESPONSE=$(curl -s \
+              "https://api.github.com/repos/ValveSoftware/openvr/releases?per_page=100&page=$PAGE")
+            PAGE_TAGS=$(echo "$RESPONSE" | jq -r '.[].tag_name')
+            [ -z "$PAGE_TAGS" ] && break
+            while IFS= read -r TAG; do
+              TAGS+=("$TAG")
+            done <<< "$PAGE_TAGS"
+            PAGE=$((PAGE + 1))
+          done
+
+          # Reverse array for chronological order
+          REVERSED=()
+          for (( i=${#TAGS[@]}-1; i>=0; i-- )); do
+            REVERSED+=("${TAGS[$i]}")
+          done
+
+          for TAG in "${REVERSED[@]}"; do
+            VERSION=${TAG#v}
+            echo "::group::$TAG"
+
+            # Check NuGet.org
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://api.nuget.org/v3/registration5/jeppdev.openvr.binaries/$VERSION.json")
+
+            if [ "$STATUS" = "200" ]; then
+              echo "Already published, skipping"
+              echo "::endgroup::"
+              continue
+            fi
+
+            BASE="https://github.com/ValveSoftware/openvr/raw/$TAG"
+            FAILED=false
+
+            # Clean previous iteration
+            rm -rf runtimes/
+
+            # win-x64 (required)
+            mkdir -p runtimes/win-x64/native
+            curl -fsSL "$BASE/bin/win64/openvr_api.dll" \
+              -o runtimes/win-x64/native/openvr_api.dll     || FAILED=true
+            curl -fsSL "$BASE/bin/win64/openvr_api.dll.sig" \
+              -o runtimes/win-x64/native/openvr_api.dll.sig || true
+            curl -fsSL "$BASE/bin/win64/openvr_api.pdb" \
+              -o runtimes/win-x64/native/openvr_api.pdb     || true
+
+            # win-x86 (required)
+            mkdir -p runtimes/win-x86/native
+            curl -fsSL "$BASE/bin/win32/openvr_api.dll" \
+              -o runtimes/win-x86/native/openvr_api.dll     || FAILED=true
+            curl -fsSL "$BASE/bin/win32/openvr_api.dll.sig" \
+              -o runtimes/win-x86/native/openvr_api.dll.sig || true
+            curl -fsSL "$BASE/bin/win32/openvr_api.pdb" \
+              -o runtimes/win-x86/native/openvr_api.pdb     || true
+
+            # linux-x64 (required)
+            mkdir -p runtimes/linux-x64/native
+            curl -fsSL "$BASE/bin/linux64/libopenvr_api.so" \
+              -o runtimes/linux-x64/native/libopenvr_api.so     || FAILED=true
+            curl -fsSL "$BASE/bin/linux64/libopenvr_api.so.dbg" \
+              -o runtimes/linux-x64/native/libopenvr_api.so.dbg || true
+
+            # linux-arm64 (optional - may not exist in older releases)
+            mkdir -p runtimes/linux-arm64/native
+            curl -fsSL "$BASE/bin/linuxarm64/libopenvr_api.so" \
+              -o runtimes/linux-arm64/native/libopenvr_api.so     || true
+            curl -fsSL "$BASE/bin/linuxarm64/libopenvr_api.so.dbg" \
+              -o runtimes/linux-arm64/native/libopenvr_api.so.dbg || true
+
+            if [ "$FAILED" = "true" ]; then
+              echo "⚠️ Required binaries missing for $TAG, skipping"
+              echo "::endgroup::"
+              continue
+            fi
+
+            # Pack
+            dotnet pack JeppDev.OpenVR.Binaries.csproj \
+              -p:Version=$VERSION \
+              --output .
+
+            # Push to NuGet.org
+            dotnet nuget push JeppDev.OpenVR.Binaries.$VERSION.nupkg \
+              -k $NUGET_API_KEY \
+              -s https://api.nuget.org/v3/index.json
+
+            # Push to GitHub Packages
+            dotnet nuget push JeppDev.OpenVR.Binaries.$VERSION.nupkg \
+              -k $GITHUB_TOKEN \
+              -s "https://nuget.pkg.github.com/$REPO_OWNER/index.json"
+
+            # Clean up nupkg for next iteration
+            rm -f JeppDev.OpenVR.Binaries.$VERSION.nupkg
+
+            echo "::endgroup::"
+          done
