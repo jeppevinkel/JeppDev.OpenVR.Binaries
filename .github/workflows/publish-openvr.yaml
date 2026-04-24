@@ -71,12 +71,12 @@ jobs:
             -p:Version=${{ steps.openvr.outputs.version }} \
             --output .
 
-      # - name: Push to NuGet.org
-      #   if: steps.check.outputs.exists == 'false'
-      #   run: |
-      #     dotnet nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
-      #       -k ${{ secrets.NUGET_API_KEY }} \
-      #       -s https://api.nuget.org/v3/index.json
+      - name: Push to NuGet.org
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          dotnet nuget push JeppDev.OpenVR.Binaries.${{ steps.openvr.outputs.version }}.nupkg \
+            -k ${{ secrets.NUGET_API_KEY }} \
+            -s https://api.nuget.org/v3/index.json
 
       - name: Push to GitHub Packages
         if: steps.check.outputs.exists == 'false'
